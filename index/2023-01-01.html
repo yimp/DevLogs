@@ -1,0 +1,628 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome file</title>
+  <link rel="stylesheet" href="https://stackedit.cn/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><blockquote>
+<p><strong>作者</strong> Yim</p>
+<p><strong>时间</strong> 2023/01/01</p>
+</blockquote>
+<h1 id="日志系统"><span class="prefix"></span><span class="content">日志系统</span><span class="suffix"></span></h1>
+<h2 id="简介"><span class="prefix"></span><span class="content">简介</span><span class="suffix"></span></h2>
+<p>实现日志系统是开发一个大型软件最基本，且意义极为重大的一项工作。这个工作看似简单，其实却大有学问。于开发人员而言，它可以方便我们调试我们的程序；于用户而言，它可以给用户提高更为直观的信息。逻辑清晰，有条理的日志信息使开发工作事半功倍，杂乱不堪的日志信息则会给开发人员带来更大的麻烦。</p>
+<h2 id="日志的等级"><span class="prefix"></span><span class="content">日志的等级</span><span class="suffix"></span></h2>
+
+<table>
+<thead>
+<tr>
+<th align="center">等级</th>
+<th align="center">目的</th>
+<th align="center">阶段</th>
+<th align="center">对象</th>
+<th align="center">程度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">ERROR</td>
+<td align="center">警告</td>
+<td align="center">运行</td>
+<td align="center">用户</td>
+<td align="center">准确，严重</td>
+</tr>
+<tr>
+<td align="center">WARN</td>
+<td align="center">提醒</td>
+<td align="center">运行，使用</td>
+<td align="center">用户</td>
+<td align="center">准确</td>
+</tr>
+<tr>
+<td align="center">INFO</td>
+<td align="center">说明</td>
+<td align="center">使用</td>
+<td align="center">运维</td>
+<td align="center">简洁</td>
+</tr>
+<tr>
+<td align="center">DEBUG</td>
+<td align="center">详解</td>
+<td align="center">开发调试</td>
+<td align="center">维护，开发</td>
+<td align="center">详细清楚</td>
+</tr>
+<tr>
+<td align="center">TRACE</td>
+<td align="center">研究</td>
+<td align="center">调试，学习</td>
+<td align="center">开发，探究</td>
+<td align="center">细致入微</td>
+</tr>
+</tbody>
+</table><ul>
+<li>
+<p><strong>ERROR</strong> 要求准确报告系统的错误，包括错误的类型，内容，位置和场景，是否可恢复等等。只有当错误影响到系统正常运行时，才应该作为错误日志输出。</p>
+</li>
+<li>
+<p><strong>WARN</strong> 系统目前还正常，只是提醒用户当前的操作可能引发错误。</p>
+</li>
+<li>
+<p><strong>INFO</strong> 记录某一重要时刻系统的运行状态，运行过程。谁在什么时候在哪里做了什么。</p>
+</li>
+<li>
+<p><strong>DEBUG</strong> 记录系统运行过程与状态的细节信息，主要用于调试。</p>
+</li>
+<li>
+<p><strong>TRACE</strong> 系统结构与内容的细节信息，比如一些关键对象的内容，函数调用参数，运行结果等等。</p>
+</li>
+</ul>
+<h2 id="spdlog库"><span class="prefix"></span><span class="content">spdlog库</span><span class="suffix"></span></h2>
+<p>一个基于c++的头文件快速log库。</p>
+<h3 id="重要特色："><span class="prefix"></span><span class="content">重要特色：</span><span class="suffix"></span></h3>
+<ul>
+<li>基于fmt库实现的输出内容格式化</li>
+<li>支持多线程日志输出</li>
+<li>支持运行时，编译时两种等级的日志输出。</li>
+</ul>
+<blockquote>
+<p><strong>运行时（run time）</strong> 在代码运行前，不进行完全编译，不支持输出代码详细的行数以及文件名</p>
+<p><strong>编译时（compile time）</strong> 代码先完全编译后运行，输出速度更快，支持代码行数和文件名的输出</p>
+</blockquote>
+<h3 id="代码集成"><span class="prefix"></span><span class="content">代码集成</span><span class="suffix"></span></h3>
+<p>将spdlog库封装成为KiRan::Log类，该类为一个纯静态类，类中仅包含初始化函数、两个运行时logger以及它们的get方法。两个logger分别用于核心日志输出和应用程序日志输出。</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token comment">//log.h</span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"Kiran/Core/Core.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">&lt;spdlog/spdlog.h&gt;</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">&lt;spdlog/sinks/stdout_color_sinks.h&gt;</span></span>
+
+namespace KiRan
+<span class="token punctuation">{</span>
+	class Log
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">Init</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">inline</span> <span class="token keyword">static</span> <span class="token keyword">const</span> Ptr<span class="token operator">&lt;</span>spdlog<span class="token punctuation">:</span><span class="token punctuation">:</span>logger<span class="token operator">&gt;</span><span class="token operator">&amp;</span> <span class="token function">GetCoreLogger</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> s_CoreLogger<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+		<span class="token keyword">inline</span> <span class="token keyword">static</span> <span class="token keyword">const</span> Ptr<span class="token operator">&lt;</span>spdlog<span class="token punctuation">:</span><span class="token punctuation">:</span>logger<span class="token operator">&gt;</span><span class="token operator">&amp;</span> <span class="token function">GetApplicationLogger</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> s_ApplicationLogger<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+		
+	private<span class="token punctuation">:</span>
+		<span class="token comment">//runtime logger</span>
+		<span class="token keyword">static</span> Ptr<span class="token operator">&lt;</span>spdlog<span class="token punctuation">:</span><span class="token punctuation">:</span>logger<span class="token operator">&gt;</span> s_CoreLogger<span class="token punctuation">;</span>
+		<span class="token keyword">static</span> Ptr<span class="token operator">&lt;</span>spdlog<span class="token punctuation">:</span><span class="token punctuation">:</span>logger<span class="token operator">&gt;</span> s_ApplicationLogger<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>初始化函数中，创建两个带颜色输出的多线程logger，用std::sharde_ptr进行维护，并设置输出的模式。</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token comment">//Log.cpp</span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KRpch.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"Log.h"</span></span>
+
+KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>Ptr<span class="token operator">&lt;</span>spdlog<span class="token punctuation">:</span><span class="token punctuation">:</span>logger<span class="token operator">&gt;</span> KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>Log<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">s_CoreLogger</span><span class="token punctuation">(</span>nullptr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>Ptr<span class="token operator">&lt;</span>spdlog<span class="token punctuation">:</span><span class="token punctuation">:</span>logger<span class="token operator">&gt;</span> KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>Log<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">s_ApplicationLogger</span><span class="token punctuation">(</span>nullptr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">void</span> KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>Log<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">Init</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	s_CoreLogger <span class="token operator">=</span> spdlog<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">stdout_color_mt</span><span class="token punctuation">(</span><span class="token string">"KiRan Core Logger"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	s_ApplicationLogger <span class="token operator">=</span> spdlog<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">stdout_color_mt</span><span class="token punctuation">(</span><span class="token string">"KiRan Appl Logger"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+	spdlog<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">set_pattern</span><span class="token punctuation">(</span><span class="token string">"%^[%T] [%l] %n: %v (file: %s | line: %#)%$"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>另外，将spdlog是编译时输出和运行时输出通过宏进行封装。</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token comment">/**************************LOG MACROS***********************************/</span>
+
+<span class="token macro property">#<span class="token directive keyword">ifdef</span> KR_COMPLIETIME_LOG</span>
+<span class="token comment">/***********************COMPILETIME LOG MACROS***********************************/</span>
+	
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_WARN(...)       SPDLOG_LOGGER_WARN(KiRan::Log::GetCoreLogger(), __VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_INFO(...)       SPDLOG_LOGGER_INFO(KiRan::Log::GetCoreLogger(), __VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_TRACE(...)      SPDLOG_LOGGER_TRACE(KiRan::Log::GetCoreLogger(), __VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_ERROR(...)      SPDLOG_LOGGER_ERROR(KiRan::Log::GetCoreLogger(), __VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_CRIT(...)		 SPDLOG_LOGGER_CRITICAL(KiRan::Log::GetCoreLogger(), __VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_ASSERT(x, ...)  if(!x) SPDLOG_LOGGER_CRITICAL(KiRan::Log::GetCoreLogger(), __VA_ARGS__)</span>
+							    
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_WARN(...)        SPDLOG_LOGGER_WARN(KiRan::Log::GetApplicationLogger(), __VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_INFO(...)        SPDLOG_LOGGER_INFO(KiRan::Log::GetApplicationLogger(), __VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_TRACE(...)       SPDLOG_LOGGER_TRACE(KiRan::Log::GetApplicationLogger(), __VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_ERROR(...)       SPDLOG_LOGGER_ERROR(KiRan::Log::GetApplicationLogger(), __VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_CRIT(...)		 SPDLOG_LOGGER_CRITICAL(KiRan::Log::GetApplicationLogger(), __VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_ASSERT(x, ...)   if(!x) SPDLOG_LOGGER_CRITICAL(KiRan::Log::GetApplicationLogger(), __VA_ARGS__)</span>
+
+<span class="token macro property">#<span class="token directive keyword">else</span></span>
+<span class="token comment">/***********************RUNTIME LOG MACROS***********************************/</span>
+
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_WARN(...)       KiRan::Log::GetCoreLogger()-&gt;warn(__VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_INFO(...)		 KiRan::Log::GetCoreLogger()-&gt;info(__VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_TRACE(...)		 KiRan::Log::GetCoreLogger()-&gt;trace(__VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_ERROR(...)		 KiRan::Log::GetCoreLogger()-&gt;error(__VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_CRIT(...)		 KiRan::Log::GetCoreLogger()-&gt;critical(__VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_CORE_ASSERT(x, ...)  if(!x) KiRan::Log::GetCoreLogger()-&gt;critical(__VA_ARGS__)</span>
+	
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_WARN(...)		 KiRan::Log::GetApplicationLogger()-&gt;warn(__VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_INFO(...)		 KiRan::Log::GetApplicationLogger()-&gt;info(__VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_TRACE(...)		 KiRan::Log::GetApplicationLogger()-&gt;trace(__VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_ERROR(...)		 KiRan::Log::GetApplicationLogger()-&gt;error(__VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_CRIT(...)		 KiRan::Log::GetApplicationLogger()-&gt;critical(__VA_ARGS__)</span>
+	<span class="token macro property">#<span class="token directive keyword">define</span>  KR_APP_ASSERT(x, ...)   if(!x) KiRan::Log::GetApplicationLogger()-&gt;critical(__VA_ARGS__)</span>
+
+<span class="token macro property">#<span class="token directive keyword">endif</span> </span><span class="token comment">// KR_COMPLIETIME_LOG</span>
+</code></pre>
+<h1 id="架构"><span class="prefix"></span><span class="content">架构</span><span class="suffix"></span></h1>
+<h2 id="入口点"><span class="prefix"></span><span class="content">入口点</span><span class="suffix"></span></h2>
+<p>入口点（EntryPoint）是整个引擎的运行的起点，其中包含main函数。入口点可以以头文件的形式存在，包含在沙盒程序的代码中运行。main函数中主要进行一些模块的初始化，主程序的创建和运行。</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token comment">//EntryPoint.h</span>
+<span class="token macro property">#<span class="token directive keyword">pragma</span> once</span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Core/Log.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Application/Application.h"</span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>Log<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">Init</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+	KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>Application app<span class="token punctuation">;</span>
+	app<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="应用程序"><span class="prefix"></span><span class="content">应用程序</span><span class="suffix"></span></h2>
+<p>应用程序（Application）是整个引擎的核心部分，整个引擎都以一个应用程序对象为基础。其职责是处理各种应用层逻辑，包括运行状态，窗体事件等等。</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token comment">//Application.h</span>
+<span class="token macro property">#<span class="token directive keyword">pragma</span> once</span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Core/Core.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"Window.h"</span></span>
+
+namespace KiRan
+<span class="token punctuation">{</span>
+	class Application
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">Application</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		virtual <span class="token keyword">void</span> <span class="token function">Run</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		virtual <span class="token keyword">void</span> <span class="token function">OnEvent</span><span class="token punctuation">(</span>Event <span class="token operator">&amp;</span> e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+	private<span class="token punctuation">:</span>
+		bool <span class="token function">OnWindowClose</span><span class="token punctuation">(</span>WindowCloseEvent<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		bool <span class="token function">OnWindowResize</span><span class="token punctuation">(</span>WindowResizeEvent<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		bool <span class="token function">OnWindowMove</span><span class="token punctuation">(</span>WindowMoveEvent<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		bool <span class="token function">OnWindowFocusChange</span><span class="token punctuation">(</span>WindowFocusChangeEvent<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		bool <span class="token function">OnMouseMove</span><span class="token punctuation">(</span>MouseMoveEvent<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		bool <span class="token function">OnMouseButtonPress</span><span class="token punctuation">(</span>MouseButtonPressEvent<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		bool <span class="token function">OnMouseButtonRelease</span><span class="token punctuation">(</span>MouseButtonReleaseEvent<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		bool <span class="token function">OnMouseScroll</span><span class="token punctuation">(</span>MouseScrollEvent<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		bool <span class="token function">OnKeyPress</span><span class="token punctuation">(</span>KeyPressEvent<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		bool <span class="token function">KeyRelease</span><span class="token punctuation">(</span>KeyReleaseEvent<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		bool m_Running<span class="token punctuation">;</span>
+
+		Ptr<span class="token operator">&lt;</span>Window<span class="token operator">&gt;</span> m_Window<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>应用程序中包含一个窗口对象，当应用程序创建时，也会创建一个窗口，并将窗口事件和应用程序中是事件处理函数绑定起来。</p>
+<pre class=" language-c"><code class="prism ++ language-c">	Application<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">Application</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		m_Running <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+		m_Window<span class="token punctuation">.</span><span class="token function">reset</span><span class="token punctuation">(</span>Window<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">Create</span><span class="token punctuation">(</span><span class="token number">1280</span><span class="token punctuation">,</span> <span class="token number">720</span><span class="token punctuation">,</span> <span class="token string">"KiRan Engine"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		m_Window<span class="token operator">-&gt;</span><span class="token function">SetEventFunOnApp</span><span class="token punctuation">(</span>std<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">bind</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>Application<span class="token punctuation">:</span><span class="token punctuation">:</span>OnEvent<span class="token punctuation">,</span> this<span class="token punctuation">,</span> std<span class="token punctuation">:</span><span class="token punctuation">:</span>placeholders<span class="token punctuation">:</span><span class="token punctuation">:</span>_1<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+</code></pre>
+<p>应用程序的运行过程中，窗口也应在不断刷新（帧）</p>
+<pre class=" language-c"><code class="prism ++ language-c">	<span class="token keyword">void</span> Application<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">while</span> <span class="token punctuation">(</span>m_Running<span class="token punctuation">)</span>
+		<span class="token punctuation">{</span>
+			m_Window<span class="token operator">-&gt;</span><span class="token function">OnUpdate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span>
+
+	<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="窗口"><span class="prefix"></span><span class="content">窗口</span><span class="suffix"></span></h2>
+<h3 id="跨平台"><span class="prefix"></span><span class="content">跨平台</span><span class="suffix"></span></h3>
+<p>为了后续实现跨平台构建，利用C++的多态性来设计窗口类。</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Events/Event.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Events/KeyEvent.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Events/MouseEvent.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Events/ApplicationEvent.h"</span></span>
+
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">&lt;functional&gt;</span></span>
+
+namespace KiRan
+<span class="token punctuation">{</span>
+	using EventFunOnApp <span class="token operator">=</span> std<span class="token punctuation">:</span><span class="token punctuation">:</span>function<span class="token operator">&lt;</span><span class="token keyword">void</span><span class="token punctuation">(</span>Event<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token operator">&gt;</span><span class="token punctuation">;</span>
+
+	class Window
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		virtual <span class="token operator">~</span><span class="token function">Window</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token keyword">default</span><span class="token punctuation">;</span>
+		virtual <span class="token keyword">void</span> <span class="token function">OnUpdate</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+		virtual <span class="token keyword">unsigned</span> <span class="token keyword">int</span> <span class="token function">GetWidth</span><span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token keyword">const</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+		virtual <span class="token keyword">unsigned</span> <span class="token keyword">int</span> <span class="token function">GetHeight</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+		virtual <span class="token keyword">void</span><span class="token operator">*</span> <span class="token function">GetWindow</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+		virtual <span class="token keyword">void</span> <span class="token function">SetEventFunOnApp</span><span class="token punctuation">(</span><span class="token keyword">const</span> EventFunOnApp<span class="token operator">&amp;</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+		<span class="token keyword">static</span> Window<span class="token operator">*</span> <span class="token function">Create</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">int</span> width<span class="token punctuation">,</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> height<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> title<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Window类是一个基类，其中的方法除了Create都设置为了纯虚函数（为了多态）。Create函数则声明为了静态函数，会根据编译平台的不同，创建一个不同的窗口。窗口每一帧的刷新则是通过Application对OnUpdate的循环调用来实现的。</p>
+<pre class=" language-c"><code class="prism ++ language-c">	Window<span class="token operator">*</span> Window<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">Create</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">int</span> width<span class="token punctuation">,</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> height<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> title<span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+<span class="token macro property">#<span class="token directive keyword">ifdef</span> PLAT_WINDOWS</span>
+		<span class="token keyword">return</span> new <span class="token function">WindowsWindow</span><span class="token punctuation">(</span>width<span class="token punctuation">,</span> height<span class="token punctuation">,</span> title<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token macro property">#<span class="token directive keyword">endif</span> </span><span class="token comment">// PLATFOARM_WINDOWS</span>
+
+	<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="glfw"><span class="prefix"></span><span class="content">GLFW</span><span class="suffix"></span></h3>
+<p>GLFW 是一个优秀的库，利用它可以轻松地创建窗口、上下文和渲染图形，并有许多实用的功能。首先创建WindowsWindow类，然后在其构造函数中调用GLFW提供是api进行窗口的创建。</p>
+<pre class=" language-c"><code class="prism ++ language-c">namespace KiRan
+<span class="token punctuation">{</span>
+	class WindowsWindow <span class="token punctuation">:</span> public Window
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">WindowsWindow</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">int</span> width<span class="token punctuation">,</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> height<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> title<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">void</span> <span class="token function">OnUpdate</span><span class="token punctuation">(</span><span class="token punctuation">)</span> override<span class="token punctuation">;</span>
+
+		<span class="token keyword">inline</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> <span class="token function">GetWidth</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> override  <span class="token punctuation">{</span> <span class="token keyword">return</span> m_WindowInfo<span class="token punctuation">.</span>m_Width<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+		<span class="token keyword">inline</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> <span class="token function">GetHeight</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> override <span class="token punctuation">{</span> <span class="token keyword">return</span> m_WindowInfo<span class="token punctuation">.</span>m_Height<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+		<span class="token keyword">inline</span> <span class="token keyword">void</span><span class="token operator">*</span> <span class="token function">GetWindow</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_Window<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+		<span class="token keyword">inline</span> <span class="token keyword">void</span> <span class="token function">SetEventFunOnApp</span><span class="token punctuation">(</span><span class="token keyword">const</span> EventFunOnApp<span class="token operator">&amp;</span> onEvent<span class="token punctuation">)</span> override <span class="token punctuation">{</span> m_WindowInfo<span class="token punctuation">.</span>m_OnEvent <span class="token operator">=</span> onEvent<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	private<span class="token punctuation">:</span>
+		<span class="token keyword">struct</span> Info
+		<span class="token punctuation">{</span>
+			<span class="token keyword">unsigned</span> <span class="token keyword">int</span> m_Width<span class="token punctuation">;</span>
+			<span class="token keyword">unsigned</span> <span class="token keyword">int</span> m_Height<span class="token punctuation">;</span>
+			std<span class="token punctuation">:</span><span class="token punctuation">:</span>string m_Title<span class="token punctuation">;</span>
+			EventFunOnApp m_OnEvent<span class="token punctuation">;</span>
+
+			<span class="token function">Info</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">int</span> width<span class="token punctuation">,</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> height<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> title <span class="token punctuation">)</span> 
+			<span class="token punctuation">:</span> <span class="token function">m_Width</span><span class="token punctuation">(</span>width<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">m_Height</span><span class="token punctuation">(</span>height<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">m_Title</span><span class="token punctuation">(</span>title<span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+
+		<span class="token punctuation">}</span> m_WindowInfo<span class="token punctuation">;</span>
+
+		Ptr<span class="token operator">&lt;</span>GLFWwindow<span class="token operator">&gt;</span> m_Window<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+</code></pre>
+<p>在WindowsWindow类中定义了一个结构体变量用于存储窗口的一些信息。SetEventFunOnApp函数用于将窗口事件和应用程序中的事件处理函数绑定起来（将应用程序中的事件处理函数通过函数对象的方式维护在窗体信息中，在创建窗口时，对其进行调用）。</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token comment">//利用glfw创建窗口</span>
+WindowsWindow<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">WindowsWindow</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">int</span> width<span class="token punctuation">,</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> height<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span> title<span class="token punctuation">)</span>
+		<span class="token punctuation">:</span> <span class="token function">m_WindowInfo</span><span class="token punctuation">(</span>width<span class="token punctuation">,</span> height<span class="token punctuation">,</span> title<span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">int</span> state <span class="token operator">=</span> <span class="token function">glfwInit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token function">KR_CORE_ASSERT</span><span class="token punctuation">(</span>state<span class="token punctuation">,</span> <span class="token string">"Fail To Initalize glfw!"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		m_Window<span class="token punctuation">.</span><span class="token function">reset</span><span class="token punctuation">(</span><span class="token function">glfwCreateWindow</span><span class="token punctuation">(</span>width<span class="token punctuation">,</span> height<span class="token punctuation">,</span> title<span class="token punctuation">,</span> <span class="token constant">NULL</span><span class="token punctuation">,</span> <span class="token constant">NULL</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token function">KR_CORE_ASSERT</span><span class="token punctuation">(</span>m_Window<span class="token punctuation">,</span> <span class="token string">"Fail To Create GLFW Window!"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            
+        <span class="token function">glfwMakeContextCurrent</span><span class="token punctuation">(</span>m_Window<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token function">glfwSetWindowUserPointer</span><span class="token punctuation">(</span>m_Window<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>m_WindowInfo<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+</code></pre>
+<p>glfwCreateWindow函数的作用是创建一个窗口;glfwMakeContextCurrent函数可以用来将当前线程的上下文设置为指定的窗口的上下文;glfwSetWindowUserPointer函数用于设置当前窗口的用户指针，该用户指针可以存储应用程序与窗口相关的数据,这里我们让该用户指针指向m_WindowInfo.</p>
+<h1 id="事件系统"><span class="prefix"></span><span class="content">事件系统</span><span class="suffix"></span></h1>
+<p>事件系统是指对整个系统中各种窗体事件和输入事件进行处理的过程的集合。事件由用户引起，由GLFW最先接收，最终在应用程序中完成处理。</p>
+<h2 id="glfw事件"><span class="prefix"></span><span class="content">glfw事件</span><span class="suffix"></span></h2>
+<p>通过调用glfw提供的api来接收事件，并利用lamda函数将事件回调函数绑定为应用程序中的事件处理函数。当触发某一事件时，该事件将会转到Application中的OnEvent函数中进行处理。值得一提的是这里是利用了glfwGetWindowUserPointer函数才实现了在回调函数中获取窗体信息.</p>
+<pre class=" language-c"><code class="prism ++ language-c">		<span class="token function">glfwSetWindowSizeCallback</span><span class="token punctuation">(</span>m_Window<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>GLFWwindow<span class="token operator">*</span> window<span class="token punctuation">,</span> <span class="token keyword">int</span> width<span class="token punctuation">,</span> <span class="token keyword">int</span> height<span class="token punctuation">)</span>
+		<span class="token punctuation">{</span>
+			<span class="token keyword">auto</span> windowInfo <span class="token operator">=</span> <span class="token punctuation">(</span>Info<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">glfwGetWindowUserPointer</span><span class="token punctuation">(</span>window<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+			windowInfo<span class="token operator">-&gt;</span><span class="token function">m_OnEvent</span><span class="token punctuation">(</span><span class="token function">WindowResizeEvent</span><span class="token punctuation">(</span>width<span class="token punctuation">,</span> height<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+			windowInfo<span class="token operator">-&gt;</span>m_Height <span class="token operator">=</span> height<span class="token punctuation">;</span>
+			windowInfo<span class="token operator">-&gt;</span>m_Width <span class="token operator">=</span> width<span class="token punctuation">;</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token function">glfwSetWindowCloseCallback</span><span class="token punctuation">(</span>m_Window<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>GLFWwindow<span class="token operator">*</span> window<span class="token punctuation">)</span> 
+		<span class="token punctuation">{</span>
+			WindowCloseEvent windowCloseEvent<span class="token punctuation">;</span>
+			<span class="token keyword">auto</span> windowInfo <span class="token operator">=</span> <span class="token punctuation">(</span>Info<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">glfwGetWindowUserPointer</span><span class="token punctuation">(</span>window<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+			windowInfo<span class="token operator">-&gt;</span><span class="token function">m_OnEvent</span><span class="token punctuation">(</span>windowCloseEvent<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token function">glfwSetWindowPosCallback</span><span class="token punctuation">(</span>m_Window<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>GLFWwindow<span class="token operator">*</span> window<span class="token punctuation">,</span> <span class="token keyword">int</span> xpos<span class="token punctuation">,</span> <span class="token keyword">int</span> ypos<span class="token punctuation">)</span>
+		<span class="token punctuation">{</span>
+			<span class="token keyword">auto</span> windowInfo <span class="token operator">=</span> <span class="token punctuation">(</span>Info<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">glfwGetWindowUserPointer</span><span class="token punctuation">(</span>window<span class="token punctuation">)</span><span class="token punctuation">;</span>
+			windowInfo<span class="token operator">-&gt;</span><span class="token function">m_OnEvent</span><span class="token punctuation">(</span><span class="token function">WindowMoveEvent</span><span class="token punctuation">(</span>xpos<span class="token punctuation">,</span> ypos<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token function">glfwSetWindowFocusCallback</span><span class="token punctuation">(</span>m_Window<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>GLFWwindow<span class="token operator">*</span> window<span class="token punctuation">,</span> <span class="token keyword">int</span> focused<span class="token punctuation">)</span> 
+		<span class="token punctuation">{</span>
+			<span class="token punctuation">(</span><span class="token punctuation">(</span>Info<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">glfwGetWindowUserPointer</span><span class="token punctuation">(</span>window<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">-&gt;</span><span class="token function">m_OnEvent</span><span class="token punctuation">(</span><span class="token function">WindowFocusChangeEvent</span><span class="token punctuation">(</span>focused<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token function">glfwSetKeyCallback</span><span class="token punctuation">(</span>m_Window<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>GLFWwindow<span class="token operator">*</span> window<span class="token punctuation">,</span> <span class="token keyword">int</span> key<span class="token punctuation">,</span> <span class="token keyword">int</span> scancode<span class="token punctuation">,</span> <span class="token keyword">int</span> action<span class="token punctuation">,</span> <span class="token keyword">int</span> mods<span class="token punctuation">)</span>
+		<span class="token punctuation">{</span>
+			<span class="token keyword">auto</span> windowInfo <span class="token operator">=</span> <span class="token punctuation">(</span>Info<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">glfwGetWindowUserPointer</span><span class="token punctuation">(</span>window<span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token keyword">switch</span> <span class="token punctuation">(</span>action<span class="token punctuation">)</span>
+			<span class="token punctuation">{</span>
+			<span class="token keyword">case</span> GLFW_PRESS<span class="token punctuation">:</span> windowInfo<span class="token operator">-&gt;</span><span class="token function">m_OnEvent</span><span class="token punctuation">(</span><span class="token function">KeyPressEvent</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">break</span><span class="token punctuation">;</span>
+			<span class="token keyword">case</span> GLFW_REPEAT<span class="token punctuation">:</span> windowInfo<span class="token operator">-&gt;</span><span class="token function">m_OnEvent</span><span class="token punctuation">(</span><span class="token function">KeyPressEvent</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">break</span><span class="token punctuation">;</span>
+			<span class="token keyword">case</span> GLFW_RELEASE<span class="token punctuation">:</span> windowInfo<span class="token operator">-&gt;</span><span class="token function">m_OnEvent</span><span class="token punctuation">(</span><span class="token function">KeyReleaseEvent</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">break</span><span class="token punctuation">;</span>
+			<span class="token keyword">default</span><span class="token punctuation">:</span>
+				<span class="token keyword">break</span><span class="token punctuation">;</span>
+			<span class="token punctuation">}</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token function">glfwSetMouseButtonCallback</span><span class="token punctuation">(</span>m_Window<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>GLFWwindow<span class="token operator">*</span> window<span class="token punctuation">,</span> <span class="token keyword">int</span> button<span class="token punctuation">,</span> <span class="token keyword">int</span> action<span class="token punctuation">,</span> <span class="token keyword">int</span> mods<span class="token punctuation">)</span>
+		<span class="token punctuation">{</span>
+			<span class="token keyword">auto</span> windowInfo <span class="token operator">=</span> <span class="token punctuation">(</span>Info<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">glfwGetWindowUserPointer</span><span class="token punctuation">(</span>window<span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token keyword">switch</span> <span class="token punctuation">(</span>action<span class="token punctuation">)</span>
+			<span class="token punctuation">{</span>
+			<span class="token keyword">case</span> GLFW_PRESS<span class="token punctuation">:</span> windowInfo<span class="token operator">-&gt;</span><span class="token function">m_OnEvent</span><span class="token punctuation">(</span><span class="token function">MouseButtonPressEvent</span><span class="token punctuation">(</span>button<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">break</span><span class="token punctuation">;</span>
+			<span class="token keyword">case</span> GLFW_RELEASE<span class="token punctuation">:</span> windowInfo<span class="token operator">-&gt;</span><span class="token function">m_OnEvent</span><span class="token punctuation">(</span><span class="token function">MouseButtonReleaseEvent</span><span class="token punctuation">(</span>button<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">break</span><span class="token punctuation">;</span>
+			<span class="token keyword">default</span><span class="token punctuation">:</span>
+				<span class="token keyword">break</span><span class="token punctuation">;</span>
+			<span class="token punctuation">}</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token function">glfwSetCursorPosCallback</span><span class="token punctuation">(</span>m_Window<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>GLFWwindow<span class="token operator">*</span> window<span class="token punctuation">,</span> <span class="token keyword">double</span> xpos<span class="token punctuation">,</span> <span class="token keyword">double</span> ypos<span class="token punctuation">)</span>
+		<span class="token punctuation">{</span>
+			<span class="token punctuation">(</span><span class="token punctuation">(</span>Info<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">glfwGetWindowUserPointer</span><span class="token punctuation">(</span>window<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">-&gt;</span><span class="token function">m_OnEvent</span><span class="token punctuation">(</span><span class="token function">MouseMoveEvent</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">float</span><span class="token punctuation">)</span>xpos<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token keyword">float</span><span class="token punctuation">)</span>ypos<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token function">glfwSetScrollCallback</span><span class="token punctuation">(</span>m_Window<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>GLFWwindow<span class="token operator">*</span> window<span class="token punctuation">,</span> <span class="token keyword">double</span> xoffset<span class="token punctuation">,</span> <span class="token keyword">double</span> yoffset<span class="token punctuation">)</span>
+		<span class="token punctuation">{</span>
+			<span class="token punctuation">(</span><span class="token punctuation">(</span>Info<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">glfwGetWindowUserPointer</span><span class="token punctuation">(</span>window<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">-&gt;</span><span class="token function">m_OnEvent</span><span class="token punctuation">(</span><span class="token function">MouseScrollEvent</span><span class="token punctuation">(</span>xoffset<span class="token punctuation">,</span> yoffset<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="事件类"><span class="prefix"></span><span class="content">事件类</span><span class="suffix"></span></h2>
+<p>为了正确处理不同种类的事件,首先创建事件基类和事件类型的枚举类.在事件基类中,包含事件的处理状态,获取事件类型的方法以及分发事件的方法。我们通过模板方法来实现不同事件类型的分发.定义了DISPATCH_EVENT宏来将事件与事件响应函数绑定，首先利用std::bind将Application中的事件处理函数绑定为function对象，然后传入Event::Dispatch函数中，在该函数中判断事件类型与处理其的函数是否匹配（处理函数与模板类型是对应的，所以比较事件类型与处理函数的类型，实际上是比较事件和模板参数的类型）。为了完成类型的匹配，事件类型的get函数需要定义两个版本，静态的和非静态的。为此设计了DEF_GET_EVENT_TYPE_FUNC(x)这个宏。</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token macro property">#<span class="token directive keyword">pragma</span> once</span>
+
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Core/Core.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Core/Log.h"</span></span>
+
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">&lt;string&gt;</span></span>
+
+namespace KiRan
+<span class="token punctuation">{</span>
+	<span class="token keyword">enum</span> class EventType
+	<span class="token punctuation">{</span>
+		None <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">,</span>
+		KeyPress<span class="token punctuation">,</span> KeyRelease<span class="token punctuation">,</span>
+		WindowClose<span class="token punctuation">,</span> WindowResize<span class="token punctuation">,</span> WindowMove<span class="token punctuation">,</span> WindowFocusChange<span class="token punctuation">,</span>
+		MouseMove<span class="token punctuation">,</span> MouseButtonPress<span class="token punctuation">,</span> MouseButtonRelease<span class="token punctuation">,</span> MouseScroll<span class="token punctuation">,</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+
+	class Event
+	<span class="token punctuation">{</span>
+		template<span class="token operator">&lt;</span>typename T<span class="token operator">&gt;</span>
+		using EventCallBackFunc <span class="token operator">=</span> <span class="token keyword">const</span> std<span class="token punctuation">:</span><span class="token punctuation">:</span>function<span class="token operator">&lt;</span><span class="token function">bool</span><span class="token punctuation">(</span>T<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token operator">&gt;</span><span class="token operator">&amp;</span> <span class="token punctuation">;</span>
+
+	public<span class="token punctuation">:</span>
+		<span class="token function">Event</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">:</span> <span class="token function">m_Handled</span><span class="token punctuation">(</span>false<span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+		virtual <span class="token operator">~</span><span class="token function">Event</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token keyword">default</span><span class="token punctuation">;</span>
+
+		<span class="token keyword">inline</span> bool <span class="token function">IsHandled</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_Handled<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+		virtual EventType <span class="token function">GetEventType</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+		template<span class="token operator">&lt;</span>typename T<span class="token operator">&gt;</span>
+		<span class="token keyword">static</span> bool <span class="token function">Dispatch</span><span class="token punctuation">(</span>EventCallBackFunc<span class="token operator">&lt;</span>T<span class="token operator">&gt;</span><span class="token punctuation">,</span> Event<span class="token operator">&amp;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+	protected<span class="token punctuation">:</span>
+		bool m_Handled<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+	template<span class="token operator">&lt;</span>typename T<span class="token operator">&gt;</span>
+	bool Event<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">Dispatch</span><span class="token punctuation">(</span>EventCallBackFunc<span class="token operator">&lt;</span>T<span class="token operator">&gt;</span> callback<span class="token punctuation">,</span> Event<span class="token operator">&amp;</span> e<span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span>e<span class="token punctuation">.</span><span class="token function">GetEventType</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> T<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">s_GetEventType</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span>e<span class="token punctuation">.</span><span class="token function">IsHandled</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> 
+		<span class="token punctuation">{</span>
+			e<span class="token punctuation">.</span>m_Handled <span class="token operator">=</span> <span class="token function">callback</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">(</span>T<span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token keyword">return</span> true<span class="token punctuation">;</span>
+		<span class="token punctuation">}</span>
+		<span class="token keyword">return</span> false<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+
+<span class="token macro property">#<span class="token directive keyword">define</span> DEF_GET_EVENT_TYPE_FUNC(x)  inline EventType GetEventType() const override { return EventType::x; }\
+							static EventType s_GetEventType() { return EventType::x; }</span>
+
+<span class="token macro property">#<span class="token directive keyword">define</span> DISPATCH_EVENT(x) Event::Dispatch&lt;x##Event&gt;(std::bind(&amp;Application::On##x, this, std::placeholders::_1), e)</span>
+
+<span class="token punctuation">}</span>
+
+
+</code></pre>
+<p>通过以上事件分发机制，可以学到如何判断某派生类的类型是否和某派生类对象的类型引用是否一致（利用静态成员函数以及模板方法）。</p>
+<h3 id="窗口事件"><span class="prefix"></span><span class="content">窗口事件</span><span class="suffix"></span></h3>
+<p>窗口移动事件，窗口缩放事件，窗口关闭事件，窗口焦点改变事件</p>
+<pre class=" language-c"><code class="prism ++ language-c">	class WindowResizeEvent <span class="token punctuation">:</span> public Event
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">WindowResizeEvent</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">int</span> width<span class="token punctuation">,</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> height<span class="token punctuation">)</span>
+			<span class="token punctuation">:</span> <span class="token function">m_Width</span><span class="token punctuation">(</span>width<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">m_Height</span><span class="token punctuation">(</span>height<span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+
+		<span class="token keyword">inline</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> <span class="token function">GetWidth</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_Width<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+		<span class="token keyword">inline</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span> <span class="token function">GetHeight</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_Height<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+		<span class="token function">DEF_GET_EVENT_TYPE_FUNC</span><span class="token punctuation">(</span>WindowResize<span class="token punctuation">)</span>
+		
+	private<span class="token punctuation">:</span>
+		<span class="token keyword">unsigned</span> <span class="token keyword">int</span> m_Width<span class="token punctuation">;</span>
+		<span class="token keyword">unsigned</span> <span class="token keyword">int</span> m_Height<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+	class WindowCloseEvent <span class="token punctuation">:</span> public Event
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">DEF_GET_EVENT_TYPE_FUNC</span><span class="token punctuation">(</span>WindowClose<span class="token punctuation">)</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+	class WindowMoveEvent <span class="token punctuation">:</span> public Event
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">WindowMoveEvent</span><span class="token punctuation">(</span><span class="token keyword">int</span> xpos<span class="token punctuation">,</span> <span class="token keyword">int</span> ypos<span class="token punctuation">)</span>
+		 <span class="token punctuation">:</span> <span class="token function">m_Xpos</span><span class="token punctuation">(</span>xpos<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">m_Ypos</span><span class="token punctuation">(</span>ypos<span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+
+		<span class="token keyword">inline</span> <span class="token keyword">int</span> <span class="token function">GetYpos</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_Xpos<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+		<span class="token keyword">inline</span> <span class="token keyword">int</span> <span class="token function">GetXpos</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_Ypos<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+		<span class="token function">DEF_GET_EVENT_TYPE_FUNC</span><span class="token punctuation">(</span>WindowMove<span class="token punctuation">)</span>
+
+	private<span class="token punctuation">:</span>
+		<span class="token keyword">int</span> m_Xpos<span class="token punctuation">;</span>
+		<span class="token keyword">int</span> m_Ypos<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+	class WindowFocusChangeEvent <span class="token punctuation">:</span> public Event
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">WindowFocusChangeEvent</span><span class="token punctuation">(</span><span class="token keyword">int</span> focused<span class="token punctuation">)</span> 
+			<span class="token punctuation">:</span> <span class="token function">m_Focused</span><span class="token punctuation">(</span>focused<span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+
+		<span class="token keyword">inline</span> <span class="token keyword">int</span> <span class="token function">GetFocusState</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_Focused<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+		<span class="token function">DEF_GET_EVENT_TYPE_FUNC</span><span class="token punctuation">(</span>WindowFocusChange<span class="token punctuation">)</span>
+
+	private<span class="token punctuation">:</span>
+		<span class="token keyword">int</span> m_Focused<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<h3 id="鼠标事件"><span class="prefix"></span><span class="content">鼠标事件</span><span class="suffix"></span></h3>
+<p>鼠标按钮按下事件，鼠标按钮释放事件，鼠标移动事件，鼠标滚轮滚动事件</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token macro property">#<span class="token directive keyword">pragma</span> once</span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Events/Event.h"</span></span>
+namespace KiRan
+<span class="token punctuation">{</span>
+	class MouseMoveEvent <span class="token punctuation">:</span> public Event
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">MouseMoveEvent</span><span class="token punctuation">(</span><span class="token keyword">float</span> xpos<span class="token punctuation">,</span> <span class="token keyword">float</span> ypos<span class="token punctuation">)</span>
+			<span class="token punctuation">:</span> <span class="token function">m_Xpos</span><span class="token punctuation">(</span>xpos<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">m_Ypos</span><span class="token punctuation">(</span>ypos<span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+
+		<span class="token function">DEF_GET_EVENT_TYPE_FUNC</span><span class="token punctuation">(</span>MouseMove<span class="token punctuation">)</span>
+
+		<span class="token keyword">inline</span> <span class="token keyword">float</span> <span class="token function">GetYpos</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_Xpos<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+		<span class="token keyword">inline</span> <span class="token keyword">float</span> <span class="token function">GetXpos</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_Ypos<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+	private<span class="token punctuation">:</span>
+		<span class="token keyword">float</span> m_Xpos<span class="token punctuation">;</span>
+		<span class="token keyword">float</span> m_Ypos<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+	class MouseButtonPressEvent <span class="token punctuation">:</span> public Event
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">MouseButtonPressEvent</span><span class="token punctuation">(</span><span class="token keyword">int</span> button<span class="token punctuation">)</span> 
+			<span class="token punctuation">:</span> <span class="token function">m_Button</span><span class="token punctuation">(</span>button<span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+
+		<span class="token function">DEF_GET_EVENT_TYPE_FUNC</span><span class="token punctuation">(</span>MouseButtonPress<span class="token punctuation">)</span>
+
+	private<span class="token punctuation">:</span>
+		<span class="token keyword">int</span> m_Button<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+	class MouseButtonReleaseEvent <span class="token punctuation">:</span> public Event
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">MouseButtonReleaseEvent</span><span class="token punctuation">(</span><span class="token keyword">int</span> button<span class="token punctuation">)</span>
+			<span class="token punctuation">:</span> <span class="token function">m_Button</span><span class="token punctuation">(</span>button<span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+
+		<span class="token function">DEF_GET_EVENT_TYPE_FUNC</span><span class="token punctuation">(</span>MouseButtonRelease<span class="token punctuation">)</span>
+
+	private<span class="token punctuation">:</span>
+		<span class="token keyword">int</span> m_Button<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+	class MouseScrollEvent <span class="token punctuation">:</span> public Event
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">MouseScrollEvent</span><span class="token punctuation">(</span><span class="token keyword">double</span> xoffset<span class="token punctuation">,</span> <span class="token keyword">double</span> yoffset<span class="token punctuation">)</span>
+			<span class="token punctuation">:</span><span class="token function">m_Xoffset</span><span class="token punctuation">(</span>xoffset<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">m_Yoffset</span><span class="token punctuation">(</span>yoffset<span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+
+		<span class="token function">DEF_GET_EVENT_TYPE_FUNC</span><span class="token punctuation">(</span>MouseScroll<span class="token punctuation">)</span>
+
+	private<span class="token punctuation">:</span>
+		<span class="token keyword">double</span> m_Xoffset<span class="token punctuation">;</span>
+		<span class="token keyword">double</span> m_Yoffset<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="键盘事件"><span class="prefix"></span><span class="content">键盘事件</span><span class="suffix"></span></h3>
+<p>KeyPress由某按键按下时触发（只触发一次），KeyRelease由按键弹起时触发，KeyRepeat事件从某按键按下到弹起前一直不断触发。在代码中用m_RepeatFlag变量与KeyPress事件加以区分。</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token macro property">#<span class="token directive keyword">pragma</span> once</span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Events/Event.h"</span></span>
+
+namespace KiRan
+<span class="token punctuation">{</span>
+	class KeyEvent <span class="token punctuation">:</span> public Event
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		virtual <span class="token operator">~</span><span class="token function">KeyEvent</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token keyword">default</span><span class="token punctuation">;</span>
+
+		<span class="token function">KeyEvent</span><span class="token punctuation">(</span><span class="token keyword">int</span> keycode<span class="token punctuation">)</span> <span class="token punctuation">:</span> <span class="token function">m_KeyCode</span><span class="token punctuation">(</span>keycode<span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+		<span class="token keyword">inline</span> <span class="token keyword">int</span> <span class="token function">GetKeyCode</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_KeyCode<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+	protected<span class="token punctuation">:</span>
+		<span class="token keyword">int</span> m_KeyCode<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+	class KeyPressEvent <span class="token punctuation">:</span> public KeyEvent
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">KeyPressEvent</span><span class="token punctuation">(</span><span class="token keyword">int</span> keycode<span class="token punctuation">,</span> <span class="token keyword">int</span> repeatCount <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">)</span>
+			<span class="token punctuation">:</span> <span class="token function">KeyEvent</span><span class="token punctuation">(</span>keycode<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">m_RepeatCount</span><span class="token punctuation">(</span>repeatCount<span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+
+
+		<span class="token function">DEF_GET_EVENT_TYPE_FUNC</span><span class="token punctuation">(</span>KeyPress<span class="token punctuation">)</span>
+
+	private<span class="token punctuation">:</span>
+		<span class="token keyword">int</span> m_RepeatFlag<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+	class KeyReleaseEvent <span class="token punctuation">:</span> public KeyEvent
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">KeyReleaseEvent</span><span class="token punctuation">(</span><span class="token keyword">int</span> keycode<span class="token punctuation">)</span> 
+			<span class="token punctuation">:</span> <span class="token function">KeyEvent</span><span class="token punctuation">(</span>keycode<span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+
+
+		<span class="token function">DEF_GET_EVENT_TYPE_FUNC</span><span class="token punctuation">(</span>KeyRelease<span class="token punctuation">)</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+</div>
+</body>
+
+</html>
