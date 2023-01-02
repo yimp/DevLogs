@@ -1,0 +1,147 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KiRan开发日志 01</title>
+  <link rel="stylesheet" href="https://stackedit.cn/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h1 id="kiran开发日志-02"><span class="prefix"></span><span class="content">KiRan开发日志 02</span><span class="suffix"></span></h1>
+<blockquote>
+<p><strong>作者</strong> Yim</p>
+<p><strong>时间</strong> 2023/01/02</p>
+</blockquote>
+<h1 id="预编译头"><span class="prefix"></span><span class="content">预编译头</span><span class="suffix"></span></h1>
+<h2 id="简介"><span class="prefix"></span><span class="content">简介</span><span class="suffix"></span></h2>
+<p>预编译头是指为了加速项目构建提前指定的一个预编译单元，该编译单元通常会把一些c++标准库，stl库或者Windows API的头文件提前编译成一个二进制单元，这样自己项目的文件就不必在包含这些头文件了（如果某个文件发生修改，则该文件将会重新编译，包括其中包含的头文件，如果使用预编译头则会避免这一点）。</p>
+<h2 id="设置"><span class="prefix"></span><span class="content">设置</span><span class="suffix"></span></h2>
+<p>在Visual Studio 2022的项目属性页：</p>
+<p><img alt="" src=""></p>
+<p>利用premake进行解决方案构建时添加预编译头的代码：</p>
+<pre class=" language-lua"><code class="prism  language-lua">	<span class="token function">pchheader</span> <span class="token punctuation">(</span><span class="token string">"KRpch.h"</span><span class="token punctuation">)</span>
+	<span class="token function">pchsource</span> <span class="token punctuation">(</span>srcDir <span class="token operator">..</span> <span class="token string">"/KRpch.cpp"</span><span class="token punctuation">)</span>
+</code></pre>
+<p>其中，指定头文件只需要指明文件名即可，而源文件则需要指明路径。</p>
+<blockquote>
+<p>lua语言中 … 是一个连接字符串的运算符。</p>
+</blockquote>
+<h1 id="层的概念"><span class="prefix"></span><span class="content">层的概念</span><span class="suffix"></span></h1>
+<p>为了设计一个能使事件处理和场景渲染层次分明的引擎架构，引入层（Layer）的概念。所有用户事件从产生起会依次到达每一层，除非在某一层事件得到了处理，而每一层渲染的场景则会层层叠加，最终呈现在用户面前的是最后渲染的那一层。</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token macro property">#<span class="token directive keyword">pragma</span> once</span>
+
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KiRan/Events/Event.h"</span></span>
+
+namespace KiRan
+<span class="token punctuation">{</span>
+	class Layer
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">Layer</span><span class="token punctuation">(</span><span class="token keyword">int</span> layerTag<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		virtual <span class="token operator">~</span><span class="token function">Layer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		virtual <span class="token keyword">void</span> <span class="token function">OnAttach</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+		virtual <span class="token keyword">void</span> <span class="token function">OnDettach</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+		virtual <span class="token keyword">void</span> <span class="token function">OnUpdate</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+		virtual <span class="token keyword">void</span> <span class="token function">OnEvent</span><span class="token punctuation">(</span>Event <span class="token operator">&amp;</span>e<span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+
+		<span class="token keyword">inline</span> <span class="token keyword">int</span> <span class="token function">GetLayerTag</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_LayerTag<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+		
+	private<span class="token punctuation">:</span>
+		<span class="token keyword">int</span> m_LayerTag<span class="token punctuation">;</span>
+
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>上述代码中，OnUpdate函数为执行该层的渲染代码，OnEvent函数则为处理该层事件的代码。</p>
+<h2 id="层栈"><span class="prefix"></span><span class="content">层栈</span><span class="suffix"></span></h2>
+<p>引擎的应用程序对象会维护一个特殊的栈，其中存储了所有层的指针，这个栈支持从两端进行插入和顺序查找删除某一层。</p>
+<pre class=" language-c"><code class="prism ++ language-c"><span class="token macro property">#<span class="token directive keyword">pragma</span> once</span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"KRpch.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"Layer.h"</span></span>
+
+namespace KiRan
+<span class="token punctuation">{</span>
+	template<span class="token operator">&lt;</span>typename T<span class="token operator">&gt;</span>
+	using container <span class="token operator">=</span> std<span class="token punctuation">:</span><span class="token punctuation">:</span>list<span class="token operator">&lt;</span>T<span class="token operator">&gt;</span><span class="token punctuation">;</span>
+
+	class LayerStack
+	<span class="token punctuation">{</span>
+	public<span class="token punctuation">:</span>
+		<span class="token function">LayerStack</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token operator">~</span><span class="token function">LayerStack</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token keyword">void</span> <span class="token function">PushHead</span><span class="token punctuation">(</span>Layer<span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">void</span> <span class="token function">PushTail</span><span class="token punctuation">(</span>Layer<span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token keyword">void</span> <span class="token function">PopLayer</span><span class="token punctuation">(</span>Layer<span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		container<span class="token operator">&lt;</span>Layer<span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">:</span><span class="token punctuation">:</span>iterator <span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_Layers<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+		container<span class="token operator">&lt;</span>Layer<span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">:</span><span class="token punctuation">:</span>iterator <span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">return</span> m_Layers<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+	private<span class="token punctuation">:</span>
+		container<span class="token operator">&lt;</span>Layer<span class="token operator">*</span><span class="token operator">&gt;</span> m_Layers<span class="token punctuation">;</span>
+		container<span class="token operator">&lt;</span>Layer<span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">:</span><span class="token punctuation">:</span>iterator m_HeadLayer<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">}</span>
+
+KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>LayerStack<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">LayerStack</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	m_HeadLayer <span class="token operator">=</span> m_Layers<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>LayerStack<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token operator">~</span><span class="token function">LayerStack</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	<span class="token keyword">for</span> <span class="token punctuation">(</span>Layer<span class="token operator">*</span> layer <span class="token punctuation">:</span> m_Layers<span class="token punctuation">)</span>
+		delete layer<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">void</span> KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>LayerStack<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">PopLayer</span><span class="token punctuation">(</span>Layer<span class="token operator">*</span> layer<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	<span class="token keyword">auto</span> it_ <span class="token operator">=</span> std<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">find</span><span class="token punctuation">(</span>m_Layers<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> m_Layers<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> layer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+	<span class="token keyword">if</span> <span class="token punctuation">(</span>it_ <span class="token operator">!=</span> m_Layers<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+		m_Layers<span class="token punctuation">.</span><span class="token function">erase</span><span class="token punctuation">(</span>it_<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+
+<span class="token keyword">void</span> KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>LayerStack<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">PushHead</span><span class="token punctuation">(</span>Layer<span class="token operator">*</span> layer<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	m_HeadLayer <span class="token operator">=</span> m_Layers<span class="token punctuation">.</span><span class="token function">emplace</span><span class="token punctuation">(</span>m_HeadLayer<span class="token punctuation">,</span> layer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">void</span> KiRan<span class="token punctuation">:</span><span class="token punctuation">:</span>LayerStack<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">PushTail</span><span class="token punctuation">(</span>Layer<span class="token operator">*</span> layer<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	m_Layers<span class="token punctuation">.</span><span class="token function">emplace_back</span><span class="token punctuation">(</span>layer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>PushHead函数为头插，PushTail为尾插。</p>
+<p>有了这个层栈，就可以在Applicatiion的Run函数中从头遍历每一层，依次执行它们的渲染代码。</p>
+<pre class=" language-c"><code class="prism ++ language-c">	<span class="token keyword">void</span> Application<span class="token punctuation">:</span><span class="token punctuation">:</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">while</span> <span class="token punctuation">(</span>m_Running<span class="token punctuation">)</span>
+		<span class="token punctuation">{</span>
+			<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">auto</span> layer <span class="token punctuation">:</span> <span class="token operator">*</span>m_LayerStack<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+				layer<span class="token operator">-&gt;</span><span class="token function">OnUpdate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token punctuation">}</span>
+
+			m_Window<span class="token operator">-&gt;</span><span class="token function">OnUpdate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span>
+
+	<span class="token punctuation">}</span>
+</code></pre>
+<p>对于每一层事件处理则在Application的OnEvent中进行，且顺序和渲染顺序是反过来的。</p>
+<pre class=" language-c"><code class="prism ++ language-c">		<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">auto</span> it <span class="token operator">=</span> m_LayerStack<span class="token operator">-&gt;</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> it <span class="token operator">!=</span> m_LayerStack<span class="token operator">-&gt;</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+			<span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token operator">--</span>it<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">-&gt;</span><span class="token function">OnEvent</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+			<span class="token keyword">if</span> <span class="token punctuation">(</span>e<span class="token punctuation">.</span><span class="token function">IsHandled</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">break</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span>
+</code></pre>
+</div>
+</body>
+
+</html>
